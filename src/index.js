@@ -1,6 +1,7 @@
 import { GraphQLServer } from "graphql-yoga";
+import { v4 as uuidv4 } from "uuid";
 
-const users = [
+let users = [
   {
     id: "1",
     name: "John",
@@ -80,6 +81,13 @@ const typeDefs = `
         me:User!
         post:Post!
     }
+
+    type Mutation {
+      createUser(name:String!,email:String!,age:Int):User!
+      createPost(title:String!,body:String!,published:Boolean,author:ID!):Post!
+      createcomment(body:String!,postid:ID!,authorid:ID!):comment!
+    }
+
     type User {
         id:ID!
         name:String!
@@ -145,6 +153,52 @@ const resolvers = {
     },
     post() {
       return posts[0];
+    },
+  },
+  Mutation: {
+    createUser(parent, args, ctx, info) {
+      const emailtaken = users.some((user) => user.email === args.email);
+
+      if (emailtaken) {
+        throw new Error(`User with email ${args.email} already exists`);
+      }
+      const user = {
+        id: uuidv4(),
+        ...args,
+      };
+      users.push(user);
+      return user;
+    },
+    createPost(parent, args, ctx, info) {
+      const Userexits = users.some((user) => user.id === args.author);
+      if (!Userexits) {
+        throw new Error("user desn't exist");
+      }
+      const post = {
+        id: uuidv4(),
+        ...args,
+      };
+      posts.push(post);
+      return post;
+    },
+    createcomment(parent, args, ctx, info) {
+      const UserandPost =
+        users.some((user) => user.id === args.authorid) &&
+        posts.some(
+          (post) => post.id === args.postid && post.published === true
+        );
+      if (!UserandPost) {
+        throw new Error(
+          "User are post dosen't exist are the post may not be published"
+        );
+      }
+
+      const comment = {
+        id: uuidv4(),
+        ...args,
+      };
+      Comments.push(comment);
+      return comment;
     },
   },
   Post: {
