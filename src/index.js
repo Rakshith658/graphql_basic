@@ -22,7 +22,7 @@ let users = [
   },
 ];
 
-const posts = [
+let posts = [
   {
     id: "1",
     title: "programming",
@@ -46,7 +46,7 @@ const posts = [
   },
 ];
 
-const Comments = [
+let Comments = [
   {
     id: "1",
     postid: "1",
@@ -83,9 +83,30 @@ const typeDefs = `
     }
 
     type Mutation {
-      createUser(name:String!,email:String!,age:Int):User!
-      createPost(title:String!,body:String!,published:Boolean,author:ID!):Post!
-      createcomment(body:String!,postid:ID!,authorid:ID!):comment!
+      createUser(data:createUserInput):User!
+      deleteUser(id:ID!):User!
+      createPost(data:createPostInput):Post!
+      deletePost(id:ID!):Post!
+      createcomment(data:createcommentInput):comment!
+      deleteComment(id:ID!):comment!
+    }
+
+    input createUserInput {
+      name:String!
+      email:String!
+      age:Int!
+    }
+
+    input createPostInput {
+      title:String!
+      body:String!
+      published:Boolean
+      author:ID!
+    }
+    input createcommentInput {
+      body:String!
+      postid:ID!
+      authorid:ID!
     }
 
     type User {
@@ -157,35 +178,62 @@ const resolvers = {
   },
   Mutation: {
     createUser(parent, args, ctx, info) {
-      const emailtaken = users.some((user) => user.email === args.email);
+      const emailtaken = users.some((user) => user.email === args.data.email);
 
       if (emailtaken) {
         throw new Error(`User with email ${args.email} already exists`);
       }
       const user = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
       users.push(user);
       return user;
     },
+    deleteUser(parent, args, ctx, info) {
+      const user = users.some((user) => user.id === args.id);
+      if (!user) {
+        throw new Error(`User with id ${args.id} does not exist`);
+      }
+      const User = users.find((user) => user.id === args.id);
+      users = users.filter((user) => user.id !== args.id);
+      posts = posts.filter((post) => {
+        const match = post.author === args.id;
+        if (match) {
+          Comments = Comments.filter((comment) => comment.id !== post.id);
+        }
+        return !match;
+      });
+      Comments = Comments.filter((comment) => comment.authorid !== args.id);
+      return User;
+    },
     createPost(parent, args, ctx, info) {
-      const Userexits = users.some((user) => user.id === args.author);
+      const Userexits = users.some((user) => user.id === args.data.author);
       if (!Userexits) {
         throw new Error("user desn't exist");
       }
       const post = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
       posts.push(post);
       return post;
     },
+    deletePost(parent, args, ctx, info) {
+      const P = posts.some((post) => post.id === args.id);
+      if (!P) {
+        throw new Error("Post with id " + args.id + "doesn't exist");
+      }
+      const Post = posts.find((post) => post.id === args.id);
+      posts = posts.filter((post) => post.id !== args.id);
+      Comments = Comments.filter((comment) => comment.postid !== args.id);
+      return Post;
+    },
     createcomment(parent, args, ctx, info) {
       const UserandPost =
-        users.some((user) => user.id === args.authorid) &&
+        users.some((user) => user.id === args.data.authorid) &&
         posts.some(
-          (post) => post.id === args.postid && post.published === true
+          (post) => post.id === args.data.postid && post.published === true
         );
       if (!UserandPost) {
         throw new Error(
@@ -195,10 +243,19 @@ const resolvers = {
 
       const comment = {
         id: uuidv4(),
-        ...args,
+        ...args.data,
       };
       Comments.push(comment);
       return comment;
+    },
+    deleteComment(parent, args, ctx, info) {
+      const comment = Comments.some((comment) => comment.id === args.id);
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+      const comm = Comments.find((comment) => comment.id === args.id);
+      Comments = Comments.filter((comment) => comment.id !== args.id);
+      return comm;
     },
   },
   Post: {
