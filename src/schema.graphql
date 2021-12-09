@@ -1,0 +1,63 @@
+type Query {
+    Users(query:String):[User]
+    Posts(query:String):[Post]
+    Comments(query:String):[comment]
+    me:User!
+    post:Post!
+}
+
+type Mutation {
+    createUser(data:createUserInput):User!
+    deleteUser(id:ID!):User!
+    createPost(data:createPostInput):Post!
+    deletePost(id:ID!):Post!
+    createcomment(data:createcommentInput):comment!
+    deleteComment(id:ID!):comment!
+}
+
+
+input createUserInput {
+    name:String!
+    email:String!
+    age:Int!
+}
+
+input createPostInput {
+    title:String!
+    body:String!
+    published:Boolean
+    author:ID!
+}
+
+input createcommentInput {
+    body:String!
+    postid:ID!
+    authorid:ID!
+}
+
+type User {
+    id:ID!
+    name:String!
+    email:String!
+    age:Int
+    posts:[Post]!
+    comments:[comment]!
+}
+
+type Post {
+    id:ID!
+    title:String!
+    body:String!
+    published:Boolean
+    author:User!
+    comments:[comment]!
+}
+
+type comment{
+    id:ID!
+    postid:String!
+    authorid:String!
+    post:Post!
+    author:User!
+    body:String!
+}
