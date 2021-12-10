@@ -31,6 +31,36 @@ const Mutation = {
     db.Comments = db.Comments.filter((comment) => comment.authorid !== args.id);
     return User;
   },
+  updateUser(parent, args, { db }, info) {
+    const userUpdateFind = db.users.find((user) => user.id === args.id);
+    const userUpdateindex = db.users.findIndex((user) => user.id === args.id);
+    if (!userUpdateFind) {
+      throw new Error(`the user is not found with this Id ${args.id}`);
+    }
+
+    if (typeof args.data.email === "string") {
+      const emailtaken = db.users.some(
+        (user) => user.email === args.data.email
+      );
+
+      if (emailtaken) {
+        throw new Error(`this email is already taken `);
+      }
+      userUpdateFind.email = args.data.email;
+    }
+    if (typeof args.data.name === "string") {
+      userUpdateFind.name = args.data.name;
+    }
+
+    if (typeof args.data.age !== "undefined") {
+      userUpdateFind.age = args.data.age;
+    }
+    if (userUpdateFind) {
+      db.users.splice(userUpdateindex, 1, userUpdateFind);
+    }
+
+    return userUpdateFind;
+  },
   createPost(parent, args, { db }, info) {
     const Userexits = db.users.some((user) => user.id === args.data.author);
     if (!Userexits) {
@@ -52,6 +82,29 @@ const Mutation = {
     db.posts = db.posts.filter((post) => post.id !== args.id);
     db.Comments = db.Comments.filter((comment) => comment.postid !== args.id);
     return Post;
+  },
+  updatePost(parent, args, { db }, info) {
+    const P = db.posts.some((post) => post.id === args.id);
+    if (!P) {
+      throw new Error("Post with id " + args.id + "doesn't exist");
+    }
+    const UpdatePost = db.posts.find((post) => post.id === args.id);
+    const PostUpdateindex = db.posts.findIndex((post) => post.id === args.id);
+    if (typeof args.data.title === "string") {
+      UpdatePost.title = args.data.title;
+    }
+    if (typeof args.data.body === "string") {
+      UpdatePost.body = args.data.body;
+    }
+    if (typeof args.data.published === "boolean") {
+      if (UpdatePost.published === false) {
+        UpdatePost.published = args.data.published;
+      }
+    }
+    if (P) {
+      db.posts.splice(PostUpdateindex, 1, UpdatePost);
+    }
+    return UpdatePost;
   },
   createcomment(parent, args, { db }, info) {
     const UserandPost =
@@ -80,6 +133,22 @@ const Mutation = {
     const comm = db.Comments.find((comment) => comment.id === args.id);
     db.Comments = db.Comments.filter((comment) => comment.id !== args.id);
     return comm;
+  },
+  updatecomment(parent, args, { db }, info) {
+    const comment = db.Comments.some((comment) => comment.id === args.id);
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+    const UpdateComment = db.Comments.find((post) => post.id === args.id);
+    const CommentsUpdateindex = db.Comments.findIndex(
+      (post) => post.id === args.id
+    );
+
+    if (typeof args.data.body === "string") {
+      UpdateComment.body = args.data.body;
+    }
+    db.Comments.splice(CommentsUpdateindex, 1, UpdateComment);
+    return UpdateComment;
   },
 };
 
