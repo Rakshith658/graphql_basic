@@ -38,7 +38,7 @@ const posts = [
     id: "3",
     title: "Lover",
     body: "Rakshith loves Chaitra",
-    published: true,
+    published: false,
     author: "2",
   },
 ];

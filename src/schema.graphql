@@ -18,6 +18,11 @@ type Mutation {
     deleteComment(id:ID!):comment!
 }
 
+type Subscription{
+    count:Int!
+    comment(postid:ID!):CommentSubscriptionpayload!
+    post:PostSubscriptionpayload!
+}
 
 input createUserInput {
     name:String!
@@ -77,4 +82,20 @@ type comment{
     post:Post!
     author:User!
     body:String!
+}
+
+enum mutationttype{
+    Deleted
+    Created
+    Updated
+}
+
+type PostSubscriptionpayload{
+    mutation:mutationttype!
+    data:Post!
+}
+
+type CommentSubscriptionpayload{
+    mutation:mutationttype!
+    data:comment!
 }
