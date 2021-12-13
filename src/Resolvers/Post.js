@@ -1,9 +1,14 @@
+import User from "../models/User";
+import Comment from "../models/Comment";
+
 const Post = {
-  author(parent, args, { db }, info) {
-    return db.users.find((user) => user.id === parent.author);
+  author: async (parent, args, { db }, info) => {
+    const users = await User.findById(parent.author.match(/^[0-9a-fA-F]{24}$/));
+    return users;
   },
-  comments(parent, args, { db }, info) {
-    return db.Comments.filter((comment) => comment.postid === parent.id);
+  comments: async (parent, args, { db }, info) => {
+    const Comments = await Comment.find({ postid: parent.id });
+    return Comments;
   },
 };
 export default Post;

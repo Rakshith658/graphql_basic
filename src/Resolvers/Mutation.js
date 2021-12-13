@@ -1,17 +1,23 @@
 import { v4 as uuidv4 } from "uuid";
+import User from "../models/User";
+import Post from "../models/Post";
+import Comment from "../models/Comment";
 
 const Mutation = {
-  createUser(parent, args, { db }, info) {
-    const emailtaken = db.users.some((user) => user.email === args.data.email);
+  createUser: async (parent, args, { db }, info) => {
+    const emailtaken = await User.findOne({ email: args.data.email });
 
     if (emailtaken) {
-      throw new Error(`User with email ${args.email} already exists`);
+      throw new Error(`User with email ${args.data.email} already exists`);
     }
-    const user = {
-      id: uuidv4(),
-      ...args.data,
-    };
-    db.users.push(user);
+
+    const newUser = new User({
+      name: args.data.name,
+      email: args.data.email,
+      age: args.data.age,
+    });
+
+    const user = await newUser.save();
     return user;
   },
   deleteUser(parent, args, { db }, info) {
@@ -61,24 +67,34 @@ const Mutation = {
 
     return userUpdateFind;
   },
-  createPost(parent, args, { db, pubsub }, info) {
-    const Userexits = db.users.some((user) => user.id === args.data.author);
+  createPost: async (parent, args, { db, pubsub }, info) => {
+    const Userexits = await User.findById(
+      args.data.author.match(/^[0-9a-fA-F]{24}$/)
+    );
+    // console.log(Userexits);
     if (!Userexits) {
       throw new Error("user desn't exist");
     }
-    const post = {
-      id: uuidv4(),
-      ...args.data,
-    };
-    db.posts.push(post);
-    if (post.published) {
-      pubsub.publish("post", {
-        post: {
-          mutation: "Created",
-          data: post,
-        },
-      });
-    }
+    const newPost = new Post({
+      title: args.data.title,
+      body: args.data.body,
+      published: args.data.published,
+      author: args.data.author,
+    });
+    // const post = {
+    //   id: uuidv4(),
+    //   ...args.data,
+    // };
+    // db.posts.push(post);
+    // if (post.published) {
+    //   pubsub.publish("post", {
+    //     post: {
+    //       mutation: "Created",
+    //       data: post,
+    //     },
+    //   });
+    // }
+    const post = await newPost.save();
     return post;
   },
   deletePost(parent, args, { db }, info) {
@@ -138,29 +154,40 @@ const Mutation = {
     }
     return UpdatePost;
   },
-  createcomment(parent, args, { db, pubsub }, info) {
-    const UserandPost =
-      db.users.some((user) => user.id === args.data.authorid) &&
-      db.posts.some(
-        (post) => post.id === args.data.postid && post.published === true
-      );
-    if (!UserandPost) {
+  createcomment: async (parent, args, { db, pubsub }, info) => {
+    const user = await User.findById(
+      args.data.authorid.match(/^[0-9a-fA-F]{24}$/)
+    );
+    const post = await Post.findById(
+      args.data.postid.match(/^[0-9a-fA-F]{24}$/)
+    );
+
+    const published = post.published;
+
+    if (user === null || post === null || published === false) {
       throw new Error(
         "User are post dosen't exist are the post may not be published"
       );
     }
 
-    const comment = {
-      id: uuidv4(),
-      ...args.data,
-    };
-    db.Comments.push(comment);
-    pubsub.publish(`comment ${args.data.postid}`, {
-      comment: {
-        mutation: "Created",
-        data: comment,
-      },
+    // const comment = {
+    //   id: uuidv4(),
+    //   ...args.data,
+    // };
+    const newComment = new Comment({
+      postid: args.data.postid,
+      authorid: args.data.authorid,
+      body: args.data.body,
     });
+
+    const comment = await newComment.save();
+    // db.Comments.push(comment);
+    // pubsub.publish(`comment ${args.data.postid}`, {
+    //   comment: {
+    //     mutation: "Created",
+    //     data: comment,
+    //   },
+    // });
     return comment;
   },
   deleteComment(parent, args, { db, pubsub }, info) {

@@ -1,9 +1,14 @@
+import Post from "../models/Post";
+import Comment from "../models/Comment";
+
 const User = {
   posts(parent, args, { db }, info) {
-    return db.posts.filter((post) => post.author === parent.id);
+    const posts = Post.find({ author: parent.id });
+    return posts;
   },
   comments(parent, args, { db }, info) {
-    return db.Comments.filter((comment) => comment.authorid === parent.id);
+    const Comments = Comment.find({ authorid: parent.id });
+    return Comments;
   },
 };
 export default User;
