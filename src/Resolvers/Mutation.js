@@ -20,52 +20,65 @@ const Mutation = {
     const user = await newUser.save();
     return user;
   },
-  deleteUser(parent, args, { db }, info) {
-    const user = db.users.some((user) => user.id === args.id);
+  deleteUser: async (parent, args, { db }, info) => {
+    const user = await User.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
     if (!user) {
       throw new Error(`User with id ${args.id} does not exist`);
     }
-    const User = db.users.find((user) => user.id === args.id);
-    db.users = db.users.filter((user) => user.id !== args.id);
-    db.posts = db.posts.filter((post) => {
-      const match = post.author === args.id;
-      if (match) {
-        db.Comments = db.Comments.filter((comment) => comment.id !== post.id);
-      }
-      return !match;
-    });
-    db.Comments = db.Comments.filter((comment) => comment.authorid !== args.id);
-    return User;
+    const _user = await User.findByIdAndDelete(
+      args.id.match(/^[0-9a-fA-F]{24}$/)
+    );
+    await Post.deleteMany({ author: _user.id });
+    await Comment.deleteMany({ authorid: _user.id });
+    // db.users = db.users.filter((user) => user.id !== args.id);
+    // db.posts = db.posts.filter((post) => {
+    //   const match = post.author === args.id;
+    //   if (match) {
+    //     db.Comments = db.Comments.filter((comment) => comment.id !== post.id);
+    //   }
+    //   return !match;
+    // });
+    // db.Comments = db.Comments.filter((comment) => comment.authorid !== args.id);
+    return _user;
   },
-  updateUser(parent, args, { db }, info) {
-    const userUpdateFind = db.users.find((user) => user.id === args.id);
-    const userUpdateindex = db.users.findIndex((user) => user.id === args.id);
+  updateUser: async (parent, args, { db }, info) => {
+    // const userUpdateFind = db.users.find((user) => user.id === args.id);
+    // const userUpdateindex = db.users.findIndex((user) => user.id === args.id);
+    const userUpdateFind = await User.findById(
+      args.id.match(/^[0-9a-fA-F]{24}$/)
+    );
     if (!userUpdateFind) {
       throw new Error(`the user is not found with this Id ${args.id}`);
     }
 
     if (typeof args.data.email === "string") {
-      const emailtaken = db.users.some(
-        (user) => user.email === args.data.email
-      );
-
+      // const emailtaken = db.users.some(
+      //   (user) => user.email === args.data.email
+      // );
+      const emailtaken = await User.findOne({ email: args.data.email });
       if (emailtaken) {
         throw new Error(`this email is already taken `);
       }
-      userUpdateFind.email = args.data.email;
+      await User.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+        email: args.data.email,
+      });
     }
     if (typeof args.data.name === "string") {
-      userUpdateFind.name = args.data.name;
+      await User.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+        name: args.data.name,
+      });
     }
 
     if (typeof args.data.age !== "undefined") {
-      userUpdateFind.age = args.data.age;
+      await User.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+        age: args.data.age,
+      });
     }
-    if (userUpdateFind) {
-      db.users.splice(userUpdateindex, 1, userUpdateFind);
-    }
-
-    return userUpdateFind;
+    // if (userUpdateFind) {
+    //   db.users.splice(userUpdateindex, 1, userUpdateFind);
+    // }
+    const Updateuser = await User.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
+    return Updateuser;
   },
   createPost: async (parent, args, { db, pubsub }, info) => {
     const Userexits = await User.findById(
@@ -86,26 +99,29 @@ const Mutation = {
     //   ...args.data,
     // };
     // db.posts.push(post);
-    // if (post.published) {
-    //   pubsub.publish("post", {
-    //     post: {
-    //       mutation: "Created",
-    //       data: post,
-    //     },
-    //   });
-    // }
+    if (newPost.published) {
+      pubsub.publish("post", {
+        post: {
+          mutation: "Created",
+          data: post,
+        },
+      });
+    }
     const post = await newPost.save();
     return post;
   },
-  deletePost(parent, args, { db }, info) {
-    const P = db.posts.some((post) => post.id === args.id);
+  deletePost: async (parent, args, { db }, info) => {
+    const P = await Post.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
     if (!P) {
       throw new Error("Post with id " + args.id + "doesn't exist");
     }
-    const Post = db.posts.find((post) => post.id === args.id);
-    db.posts = db.posts.filter((post) => post.id !== args.id);
-    db.Comments = db.Comments.filter((comment) => comment.postid !== args.id);
-    if (Post.published) {
+    const post = await Post.findByIdAndDelete(
+      args.id.match(/^[0-9a-fA-F]{24}$/)
+    );
+    await Comment.deleteMany({ postid: post.id });
+    // db.posts = db.posts.filter((post) => post.id !== args.id);
+    // db.Comments = db.Comments.filter((comment) => comment.postid !== args.id);
+    if (post.published) {
       pubsub.publish("post", {
         post: {
           mutation: "Deleted",
@@ -113,24 +129,30 @@ const Mutation = {
         },
       });
     }
-    return Post;
+    return post;
   },
-  updatePost(parent, args, { db, pubsub }, info) {
-    const P = db.posts.some((post) => post.id === args.id);
-    if (!P) {
+  updatePost: async (parent, args, { db, pubsub }, info) => {
+    const UpdatePost = await Post.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
+    if (!UpdatePost) {
       throw new Error("Post with id " + args.id + "doesn't exist");
     }
-    const UpdatePost = db.posts.find((post) => post.id === args.id);
-    const PostUpdateindex = db.posts.findIndex((post) => post.id === args.id);
+    // const UpdatePost = db.posts.find((post) => post.id === args.id);
+    // const PostUpdateindex = db.posts.findIndex((post) => post.id === args.id);
     if (typeof args.data.title === "string") {
-      UpdatePost.title = args.data.title;
+      await Post.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+        title: args.data.title,
+      });
     }
     if (typeof args.data.body === "string") {
-      UpdatePost.body = args.data.body;
+      await Post.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+        body: args.data.body,
+      });
     }
     if (typeof args.data.published === "boolean") {
       if (UpdatePost.published === false) {
-        UpdatePost.published = args.data.published;
+        await Post.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+          published: args.data.published,
+        });
       }
     }
     if (args.data.published) {
@@ -148,11 +170,10 @@ const Mutation = {
         },
       });
     }
-
-    if (P) {
-      db.posts.splice(PostUpdateindex, 1, UpdatePost);
-    }
-    return UpdatePost;
+    const UpdatePostss = await Post.findById(
+      args.id.match(/^[0-9a-fA-F]{24}$/)
+    );
+    return UpdatePostss;
   },
   createcomment: async (parent, args, { db, pubsub }, info) => {
     const user = await User.findById(
@@ -181,22 +202,23 @@ const Mutation = {
     });
 
     const comment = await newComment.save();
-    // db.Comments.push(comment);
-    // pubsub.publish(`comment ${args.data.postid}`, {
-    //   comment: {
-    //     mutation: "Created",
-    //     data: comment,
-    //   },
-    // });
+    db.Comments.push(comment);
+    pubsub.publish(`comment ${args.data.postid}`, {
+      comment: {
+        mutation: "Created",
+        data: comment,
+      },
+    });
     return comment;
   },
-  deleteComment(parent, args, { db, pubsub }, info) {
-    const comment = db.Comments.some((comment) => comment.id === args.id);
+  deleteComment: async (parent, args, { db, pubsub }, info) => {
+    const comment = await Comment.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
     if (!comment) {
       throw new Error("Comment not found");
     }
-    const comm = db.Comments.find((comment) => comment.id === args.id);
-    db.Comments = db.Comments.filter((comment) => comment.id !== args.id);
+    const comm = await Comment.findByIdAndDelete(
+      args.id.match(/^[0-9a-fA-F]{24}$/)
+    );
     pubsub.publish(`comment ${comm.postid}`, {
       comment: {
         mutation: "Deleted",
@@ -205,20 +227,23 @@ const Mutation = {
     });
     return comm;
   },
-  updatecomment(parent, args, { db, pubsub }, info) {
-    const comment = db.Comments.some((comment) => comment.id === args.id);
+  updatecomment: async (parent, args, { db, pubsub }, info) => {
+    const comment = await Comment.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
     if (!comment) {
       throw new Error("Comment not found");
     }
-    const UpdateComment = db.Comments.find((post) => post.id === args.id);
-    const CommentsUpdateindex = db.Comments.findIndex(
-      (Comment) => Comment.id === args.id
-    );
+    await Comment.findByIdAndUpdate(args.id.match(/^[0-9a-fA-F]{24}$/), {
+      body: args.data.body,
+    });
+    const UpdateComment = Comment.findById(args.id.match(/^[0-9a-fA-F]{24}$/));
+    // const CommentsUpdateindex = db.Comments.findIndex(
+    //   (Comment) => Comment.id === args.id
+    // );
 
-    if (typeof args.data.body === "string") {
-      UpdateComment.body = args.data.body;
-    }
-    db.Comments.splice(CommentsUpdateindex, 1, UpdateComment);
+    // if (typeof args.data.body === "string") {
+    //   UpdateComment.body = args.data.body;
+    // }
+    // db.Comments.splice(CommentsUpdateindex, 1, UpdateComment);
     pubsub.publish(`comment ${UpdateComment.postid}`, {
       comment: {
         mutation: "Updated",
